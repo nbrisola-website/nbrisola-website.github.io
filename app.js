@@ -1,52 +1,75 @@
-const expenseForm = document.getElementById('expense-form');
-const expenseList = document.getElementById('expense-list');
+const CLIENT_ID = 'YOUR_CLIENT_ID';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
-expenseForm.addEventListener('submit', addExpense);
+const expenseForm = document.getElementById('expenseForm');
+const expenseNameInput = document.getElementById('expenseName');
+const expenseAmountInput = document.getElementById('expenseAmount');
+const expenseList = document.getElementById('expenseList');
 
-let expenses = [];
+let sheetId = ''; // Your Google Sheet ID
 
-function addExpense(event) {
-    event.preventDefault();
-
-    const description = document.getElementById('description').value;
-    const amount = parseFloat(document.getElementById('amount').value);
-
-    if (description && amount) {
-        const expense = {
-            description,
-            amount
-        };
-
-        expenses.push(expense);
-        updateExpenseList();
-        clearForm();
-    }
+// Load the Google Sheets API
+function handleClientLoad() {
+  gapi.load('client:auth2', initClient);
 }
 
-function updateExpenseList() {
-    expenseList.innerHTML = '';
-
-    expenses.forEach((expense, index) => {
-        const expenseItem = document.createElement('div');
-        expenseItem.classList.add('expense-item');
-        expenseItem.innerHTML = `
-            <div class="expense-description">${expense.description}</div>
-            <div class="expense-amount">$${expense.amount.toFixed(2)}</div>
-            <button class="delete-button" onclick="deleteExpense(${index})">Delete</button>
-        `;
-        expenseList.appendChild(expenseItem);
+// Initialize the Google Sheets API
+function initClient() {
+  gapi.client.init({
+    clientId: CLIENT_ID,
+    scope: SCOPES,
+    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+  }).then(() => {
+    gapi.auth2.getAuthInstance().signIn().then(() => {
+      listExpenses();
     });
+  });
 }
 
-function deleteExpense(index) {
-    expenses.splice(index, 1);
-    updateExpenseList();
+// Add an expense
+function addExpense(name, amount) {
+  const values = [[name, amount]];
+  gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: sheetId,
+    range: 'Sheet1', // Update with your sheet name
+    valueInputOption: 'USER_ENTERED',
+    resource: {
+      values: values
+    }
+  }).then(() => {
+    listExpenses();
+  });
 }
 
-function clearForm() {
-    document.getElementById('description').value = '';
-    document.getElementById('amount').value = '';
+// List all expenses
+function listExpenses() {
+  gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: sheetId,
+    range: 'Sheet1' // Update with your sheet name
+  }).then(response => {
+    const values = response.result.values;
+    expenseList.innerHTML = '';
+    if (values && values.length > 0) {
+      values.forEach(row => {
+        const expenseName = row[0];
+        const expenseAmount = row[1];
+        const listItem = document.createElement('li');
+        listItem.textContent = `${expenseName}: $${expenseAmount}`;
+        expenseList.appendChild(listItem);
+      });
+    }
+  });
 }
 
-updateExpenseList();
+// Submit form and add expense
+expenseForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = expenseNameInput.value;
+  const amount = expenseAmountInput.value;
+  addExpense(name, amount);
+  expenseNameInput.value = '';
+  expenseAmountInput.value = '';
+});
 
+// Load Google API
+gapi.load('client:auth2', handleClientLoad);
