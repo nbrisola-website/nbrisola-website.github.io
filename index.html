@@ -6,6 +6,10 @@
 <body>
   <h1>Expense Tracker</h1>
   
+  <div id="authStatus">
+    <button id="authorizeButton" style="display: none;">Authorize</button>
+  </div>
+  
   <form id="expenseForm">
     <input type="text" id="expenseName" placeholder="Expense Name" required>
     <input type="number" id="expenseAmount" placeholder="Amount" required>
@@ -13,5 +17,7 @@
   </form>
   
   <ul id="expenseList"></ul>
+
+  <script src="app.js"></script>
 </body>
 </html>
